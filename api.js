@@ -1,11 +1,16 @@
-const mysql = require("mysql2");
-const crypto = require("crypto");
-
+import mysql from "mysql2";
+import crypto from "crypto";
+import jwt from "jsonwebtoken";
+import fs from 'fs';
 
 const api = [
     {
         url: "register",
         func: register
+    },
+    {
+        url: "login",
+        func: login
     }
 ];
 
@@ -26,85 +31,150 @@ db.connect((err) => {
 
 const usernameAllowedChar = "abcdefghijklmnopqrstuvwxyz1234567890!@#$%^&*()-_=+[{]}\\|;:'\",<.>/?`~";
 
-const jsonContentType = {"Content-Type": "aplication/json"};
+const tokenSecret = fs.readFileSync("./secret.txt");
+
+const jsonContentType = {"Content-Type": "application/json"};
 
 function isUserCorrect(username) {
-    for (const element of username) {
-        if (!usernameAllowedChar.contains(element)) {
-            return 0;
-        }
-    }
-
-    if (username.length < 3 || username.length < 20)
-        return false;
-
-    var count;
-    db.query("SELECT COUNT(*) AS count FROM users WHERE user = ?", [username], (err, results) => {
-        if (err) {
-            console.error(`error while checking user count: ${err}`);
+    return new Promise((resolve, reject) => {
+        for (const element of username) {
+            if (!usernameAllowedChar.includes(element)) {
+                resolve(false);
+                return;
+            }
         }
 
-        count = results[0].count;
-    });
+        if (username.length < 3 || username.length > 20) {
+            resolve(false);
+            return;
+        }
 
-    if (count > 0)
-        return false;
-
-    return true;
-}
-
-function register(res, req) {
-    let body = "";
-
-    req.on("data", chunk => {
-        body += chunk;
-    });
-
-    req.on("end", () => {
-        try {
-            const data = JSON.parse(body);
-            const {
-                first_name, 
-                last_name, 
-                user,
-                email, 
-                birthday_d, 
-                birthday_m, 
-                birthday_y, 
-                password 
-            } = data;
-
-            if (!first_name || !last_name || !birthday_d || !birthday_m || !birthday_y || !hash) {
-                res.writeHead(400, jsonContentType);
-                res.end('{error: "Missing data!"}');
+        db.query("SELECT COUNT(*) AS count FROM users WHERE user = ?", [username], (err, results) => {
+            if (err) {
+                console.error("Error checking username:", err);
+                resolve(false);
                 return;
             }
 
-            const insertQuery = `INSERT INTO users (first_name, last_name, user, email, birthday_d, birthday_m, birthday_y, hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            if (results[0].count > 0) resolve(false);
+            else resolve(true);
+        });
+    });
+}
 
-            if (!isUserCorrect(user))
+
+async function register(req, res) {
+    let body = "";
+
+    req.on("data", chunk => {
+        body += chunk
+    });
+
+    req.on("end", async () => {
+        console.log("reg_req");
+        console.log("Raw body received:", body);
+        try {
+            const data = JSON.parse(body);
+            const { first_name, last_name, user, email, birthday_d, birthday_m, birthday_y, password } = data;
+
+            if (!first_name || !last_name || !user || !birthday_d || !birthday_m || !birthday_y || !password) {
+                res.writeHead(400, jsonContentType);
+                res.end(JSON.stringify({ error: "Missing data!" }));
                 return;
+            }
+
+
+            if (!await isUserCorrect(user)) {
+                res.writeHead(400, jsonContentType);
+                res.end(JSON.stringify({ error: "Invalid username or already taken" }));
+                return;
+            }
 
             const hash = crypto.createHash("sha256").update(password).digest("hex");
 
-            db.query(insertQuery, [first_name, last_name, user, email, birthday_d, birthday_m, birthday_y], (err, result) => {
+            const insertQuery = `
+                INSERT INTO users (first_name, last_name, user, email, birthday_d, birthday_m, birthday_y, hash) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+
+            db.query(insertQuery, [first_name, last_name, user, email, birthday_d, birthday_m, birthday_y, hash], (err, result) => {
                 if (err) {
+                    console.error("Insert error:", err);
                     res.writeHead(500, jsonContentType);
-                    res.end('{error: "Database error"}')
+                    res.end(JSON.stringify({ error: "Database error" }));
+                    return;
                 }
 
                 res.writeHead(200, jsonContentType);
-                res.end(`{message: "User registered succesfully!", user_id: ${result.insertId}}`);
+                res.end(JSON.stringify({ message: "User registered successfully!", user_id: result.insertId }));
             });
-        }
-        catch (err) {
-            res.writeHead(400, { "Content-Type": "application/json" });
-            res.end(`{"error": "Invalid JSON!"}`);
+
+        } catch (err) {
+            console.error("JSON parse error:", err);
+            res.writeHead(400, jsonContentType);
+            res.end(JSON.stringify({ error: "Invalid JSON!" }));
         }
     });
 }
 
-function evalReq(res, req) {
+async function login(req, res) {
+    let body = "";
+
+    req.on("data", chunk => {
+        body += chunk
+    });
+
+    req.on("end", async () => {
+        console.log("reg_req");
+        console.log("Raw body received:", body);
+        try {
+            const data = JSON.parse(body);
+            const { user, password } = data;
+
+            if (!user || !password) {
+                res.writeHead(400, jsonContentType);
+                res.end(JSON.stringify({ error: "Missing data!" }));
+                return;
+            }
+
+            const hash = crypto.createHash("sha256").update(password).digest("hex");
+
+            const checkHash = `
+                SELECT * FROM users WHERE hash = ? AND user = ?
+            `;
+
+            db.query(checkHash, [hash, user], (err, result) => {
+                if (err) {
+                    console.error("Insert error:", err);
+                    res.writeHead(500, jsonContentType);
+                    res.end(JSON.stringify({ error: "Database error" }));
+                    return;
+                }
+
+                if (result.length === 0) {
+                    res.writeHead(401, { "Content-Type": "application/json" });
+                    res.end(JSON.stringify({ error: "Invalid username or password!" }));
+                    return;
+                }
+
+                const token = jwt.sign(
+                    {user_id: result[0].id, username: result[0].user, password: password},
+                    tokenSecret
+                )
+
+                res.writeHead(200, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ message: "Login successful", token }));
+            });
+
+        } catch (err) {
+            console.error("JSON parse error:", err);
+            res.writeHead(400, jsonContentType);
+            res.end(JSON.stringify({ error: "Invalid JSON!" }));
+        }
+    });
+}
+
+function evalReq(req, res) {
     const route = req.url.split('/')[2];
     for (let i = 0; i < api.length; i++) {
         if (api[i].url === route) {

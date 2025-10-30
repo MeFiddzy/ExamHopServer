@@ -6,7 +6,7 @@ const port = 8000;
 
 const server = http.createServer((req, res) => {
     if (req.url.startsWith('/api/')) {
-        api.evalReq(res, req);
+        api.evalReq(req, res);
     }
 });
 
