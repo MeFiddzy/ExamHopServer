@@ -2,7 +2,6 @@ import mysql from "mysql2";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import fs from 'fs';
-import { decode } from "punycode";
 
 const api = [
     {
@@ -16,6 +15,10 @@ const api = [
     {
         url: "profile",
         func: profile
+    },
+    {
+        url: "account_delete",
+        func: account_delete
     }
 ];
 
@@ -36,6 +39,8 @@ db.connect((err) => {
 
 const usernameAllowedChar = "abcdefghijklmnopqrstuvwxyz1234567890!@#$%^&*()-_=+[{]}\\|;:'\",<.>/?`~";
 
+const passwordAllowedChar = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890!@#$%^&*()-_=+[{]}\\|;:'\",<.>/?`~";
+
 const tokenSecret = fs.readFileSync("./secret.txt");
 
 const jsonContentType = {"Content-Type": "application/json"};
@@ -54,6 +59,12 @@ function isUserCorrect(username) {
             return;
         }
 
+        resolve(true);
+    });
+}
+
+function isUserTaken(username) {
+    return new Promise((resolve, reject) => {
         db.query("SELECT COUNT(*) AS count FROM users WHERE user = ?", [username], (err, results) => {
             if (err) {
                 console.error("Error checking username:", err);
@@ -61,9 +72,97 @@ function isUserCorrect(username) {
                 return;
             }
 
-            if (results[0].count > 0) resolve(false);
-            else resolve(true);
+            if (results[0].count > 0)
+                resolve(false);
+            else
+                resolve(true);
         });
+    });
+}
+
+function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function isValidPassword(pass) {
+    if (pass.length < 8)
+        return false;
+
+    const numbers = "1234567890";
+    const lettersLowercase = "abcdefghijklmnopqrstuvwxyz";
+    const lettersUppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    let numLettersLow = 0;
+    let numLettersUp = 0;
+    let numNum = 0;
+    let numSpecialChar = 0;
+
+    for (const char of pass) {
+        if (!passwordAllowedChar.includes(char))
+            return false;
+
+        if (numbers.includes(char)) {
+            numNum++;
+        }
+        else if (lettersLowercase.includes(char)) {
+            numLettersLow++;
+        }
+        else if (lettersUppercase.includes(char)) {
+            numLettersUp++;
+        }
+        else {
+            numSpecialChar++;
+        }
+    }
+
+    return (numNum && numLettersLow && numLettersUp && numSpecialChar);
+}
+
+async function account_delete(req, res) {
+    let body = "";
+
+    req.on("data", chunk => {
+        body += chunk;
+    });
+
+    req.on("end", async () => {
+        try {
+            const { user, password } = JSON.parse(body);
+
+            const hash = crypto.createHash('sha256').update(password).digest('hex');
+
+            const searchQuery = `
+                SELECT * FROM users WHERE user = ? AND hash = ?
+            `;
+
+            db.query(searchQuery, [user, hash], (err, result) => {
+                if (err) {
+                    res.writeHead(500, jsonContentType);
+                    res.end(JSON.stringify({error: "Database error"}));
+                    return;
+                }
+
+                const deleteQuery = `
+                    DELETE FROM users WHERE id = ?
+                `;
+
+                db.query(deleteQuery, [result[0].id], error => {
+                    if (error) {
+                        res.writeHead(500, jsonContentType);
+                        res.end(JSON.stringify({error: "Database error"}));
+                        return;
+                    }
+                });
+            });
+
+            res.writeHead(200, jsonContentType);
+            res.end(JSON.stringify({message: "Account deleted!"}));
+        }
+        catch(err) {
+            console.log("Error parsing JSON: ", err);
+            res.writeHead(400, jsonContentType);
+            res.end(JSON.stringify({error: "Invalid JSON!"}));
+        }
     });
 }
 
@@ -85,37 +184,40 @@ async function profile(req, res) {
                 res.end(JSON.stringify({ error: "Missing data!" }));
                 return;
             }
-
-
-            
+        
 
             jwt.verify(token, tokenSecret, (err, decoded) => {
                 if (err) {
                     res.writeHead(400, jsonContentType);
                     res.end(JSON.stringify({error: "Invalid token!"}));
+                    return;
                 }
 
                 const getDataQuery = `
-                    SELECT * FROM accounts WHERE id = ?
+                    SELECT * FROM users WHERE id = ?
                 `;
 
-                db.query(getDataQuery, [decode.id], (err, result) => {
+                console.log(decoded.user_id);
+
+                db.query(getDataQuery, [decoded.user_id], (err, result) => {
                     if (err) {
                         res.writeHead(500, jsonContentType);
                         res.end(JSON.stringify({error: "Database error"}));
                         return;
                     }
 
+                    console.log(result);
+
                     res.writeHead(200, jsonContentType);
                     res.end(JSON.stringify({
                         profile: {
-                            first_name: result.first_name,
-                            last_name: result.last_name,
-                            birthday_d: result.birthday_d,
-                            birthday_m: result.birthday_m,
-                            birthday_y: result.birthday_y,
-                            email: result.email,
-                            user: result.user
+                            first_name: result[0].first_name,
+                            last_name: result[0].last_name,
+                            birthday_d: result[0].birthday_d,
+                            birthday_m: result[0].birthday_m,
+                            birthday_y: result[0].birthday_y,
+                            email: result[0].email,
+                            user: result[0].user
                         }
                     }));
 
@@ -139,7 +241,6 @@ async function register(req, res) {
     });
 
     req.on("end", async () => {
-        console.log("reg_req");
         console.log("Raw body received:", body);
         try {
             const data = JSON.parse(body);
@@ -152,9 +253,28 @@ async function register(req, res) {
             }
 
 
+            if (!isValidEmail(email)) {
+                res.writeHead(400, jsonContentType);
+                res.end(JSON.stringify({error: "Invalid email!"}));
+                return;
+            }
+
+            if (!isValidPassword(password)) {
+                res.writeHead(400, jsonContentType);
+                res.end(JSON.stringify({error: "Invalid password!"}))
+                return;
+            }
+
             if (!await isUserCorrect(user)) {
                 res.writeHead(400, jsonContentType);
-                res.end(JSON.stringify({ error: "Invalid username or already taken" }));
+                res.end(JSON.stringify({ error: "Invalid username" }));
+                return;
+            }
+
+
+            if (!await isUserTaken(user)) {
+                res.writeHead(400, jsonContentType);
+                res.end(JSON.stringify({ error: "Username taken" }));
                 return;
             }
 
