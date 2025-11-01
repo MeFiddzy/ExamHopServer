@@ -2,6 +2,7 @@ import mysql from "mysql2";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import fs from 'fs';
+import { decode } from "punycode";
 
 const api = [
     {
@@ -11,13 +12,17 @@ const api = [
     {
         url: "login",
         func: login
+    },
+    {
+        url: "profile",
+        func: profile
     }
 ];
 
 const db = mysql.createConnection({
     host: "localhost",
     user: "root",
-    password: "qwerty12",
+    password: fs.readFileSync("./db_pass.txt"),
     database: "exam_hop"
 });
 
@@ -59,6 +64,69 @@ function isUserCorrect(username) {
             if (results[0].count > 0) resolve(false);
             else resolve(true);
         });
+    });
+}
+
+async function profile(req, res) {
+    let body = "";
+
+    req.on("data", chunk => {
+        body += chunk
+    });
+
+    req.on("end", async () => {
+        console.log("Raw body received:", body);
+        try {
+            const data = JSON.parse(body);
+            const { token } = data;
+
+            if (!token) {
+                res.writeHead(400, jsonContentType);
+                res.end(JSON.stringify({ error: "Missing data!" }));
+                return;
+            }
+
+
+            
+
+            jwt.verify(token, tokenSecret, (err, decoded) => {
+                if (err) {
+                    res.writeHead(400, jsonContentType);
+                    res.end(JSON.stringify({error: "Invalid token!"}));
+                }
+
+                const getDataQuery = `
+                    SELECT * FROM accounts WHERE id = ?
+                `;
+
+                db.query(getDataQuery, [decode.id], (err, result) => {
+                    if (err) {
+                        res.writeHead(500, jsonContentType);
+                        res.end(JSON.stringify({error: "Database error"}));
+                        return;
+                    }
+
+                    res.writeHead(200, jsonContentType);
+                    res.end(JSON.stringify({
+                        profile: {
+                            first_name: result.first_name,
+                            last_name: result.last_name,
+                            birthday_d: result.birthday_d,
+                            birthday_m: result.birthday_m,
+                            birthday_y: result.birthday_y,
+                            email: result.email,
+                            user: result.user
+                        }
+                    }));
+
+                })
+            })
+
+        } catch (err) {
+            console.error("JSON parse error:", err);
+            res.writeHead(400, jsonContentType);
+            res.end(JSON.stringify({ error: "Invalid JSON!" }));
+        }
     });
 }
 
