@@ -18,7 +18,7 @@ const api = [
     },
     {
         url: "account_delete",
-        func: account_delete
+        func: accountDelete
     }
 ];
 
@@ -118,7 +118,7 @@ function isValidPassword(pass) {
     return (numNum && numLettersLow && numLettersUp && numSpecialChar);
 }
 
-async function account_delete(req, res) {
+async function accountDelete(req, res) {
     let body = "";
 
     req.on("data", chunk => {
@@ -208,18 +208,24 @@ async function profile(req, res) {
 
                     console.log(result);
 
-                    res.writeHead(200, jsonContentType);
-                    res.end(JSON.stringify({
-                        profile: {
-                            first_name: result[0].first_name,
-                            last_name: result[0].last_name,
-                            birthday_d: result[0].birthday_d,
-                            birthday_m: result[0].birthday_m,
-                            birthday_y: result[0].birthday_y,
-                            email: result[0].email,
-                            user: result[0].user
-                        }
-                    }));
+                    try {
+                        res.writeHead(200, jsonContentType);
+                        res.end(JSON.stringify({
+                            profile: {
+                                first_name: result[0].first_name,
+                                last_name: result[0].last_name,
+                                birthday_d: result[0].birthday_d,
+                                birthday_m: result[0].birthday_m,
+                                birthday_y: result[0].birthday_y,
+                                email: result[0].email,
+                                user: result[0].user
+                            }
+                        }));
+                    }
+                    catch (err) {
+                        res.writeHead(400, jsonContentType);
+                        res.end(JSON.stringify({ error: "User doesn't exist!" }))
+                    }
 
                 })
             })
