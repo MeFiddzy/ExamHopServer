@@ -19,6 +19,10 @@ const api = [
     {
         url: "account_delete",
         func: accountDelete
+    },
+    {
+        url: "perfect_quizez",
+        func: perfectQuizez
     }
 ];
 
@@ -116,6 +120,22 @@ function isValidPassword(pass) {
     }
 
     return (numNum && numLettersLow && numLettersUp && numSpecialChar);
+}
+
+async function perfectQuizez(req, res) {
+    let body = ""
+
+    req.on("data", chunk => {
+        body += chunk
+    })
+
+    req.in("end", async () => {
+        const {user, password} = JSON.parse(body);
+
+        const hash = crypto.createHash('sha256').update(password).digest('hex');
+
+        
+    })
 }
 
 async function accountDelete(req, res) {
