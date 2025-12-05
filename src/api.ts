@@ -1,190 +1,8 @@
-import mysql from "mysql2";
-import crypto from "crypto";
-import jwt from "jsonwebtoken";
-import fs from 'fs';
 
-const api = [
-    {
-        url: "register",
-        func: register
-    },
-    {
-        url: "login",
-        func: login
-    },
-    {
-        url: "profile",
-        func: profile
-    },
-    {
-        url: "account_delete",
-        func: accountDelete
-    },
-    {
-        url: "perfect_quizez",
-        func: perfectQuizez
-    }
-];
+import { db } from "../db";
+import { Router } from "express";
 
-const db = mysql.createConnection({
-    host: "localhost",
-    user: "root",
-    password: fs.readFileSync("./db_pass.txt"),
-    database: "exam_hop"
-});
-
-db.connect((err) => {
-    if (err) {
-        console.error("db connection failed:", err);
-        return;
-    }
-    console.log("connected to db");
-});
-
-const usernameAllowedChar = "abcdefghijklmnopqrstuvwxyz1234567890!@#$%^&*()-_=+[{]}\\|;:'\",<.>/?`~";
-
-const passwordAllowedChar = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890!@#$%^&*()-_=+[{]}\\|;:'\",<.>/?`~";
-
-const tokenSecret = fs.readFileSync("./secret.txt");
-
-const jsonContentType = {"Content-Type": "application/json"};
-
-function isUserCorrect(username) {
-    return new Promise((resolve, reject) => {
-        for (const element of username) {
-            if (!usernameAllowedChar.includes(element)) {
-                resolve(false);
-                return;
-            }
-        }
-
-        if (username.length < 3 || username.length > 20) {
-            resolve(false);
-            return;
-        }
-
-        resolve(true);
-    });
-}
-
-function isUserTaken(username) {
-    return new Promise((resolve, reject) => {
-        db.query("SELECT COUNT(*) AS count FROM users WHERE user = ?", [username], (err, results) => {
-            if (err) {
-                console.error("Error checking username:", err);
-                resolve(false);
-                return;
-            }
-
-            if (results[0].count > 0)
-                resolve(false);
-            else
-                resolve(true);
-        });
-    });
-}
-
-function isValidEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-function isValidPassword(pass) {
-    if (pass.length < 8)
-        return false;
-
-    const numbers = "1234567890";
-    const lettersLowercase = "abcdefghijklmnopqrstuvwxyz";
-    const lettersUppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-    let numLettersLow = 0;
-    let numLettersUp = 0;
-    let numNum = 0;
-    let numSpecialChar = 0;
-
-    for (const char of pass) {
-        if (!passwordAllowedChar.includes(char))
-            return false;
-
-        if (numbers.includes(char)) {
-            numNum++;
-        }
-        else if (lettersLowercase.includes(char)) {
-            numLettersLow++;
-        }
-        else if (lettersUppercase.includes(char)) {
-            numLettersUp++;
-        }
-        else {
-            numSpecialChar++;
-        }
-    }
-
-    return (numNum && numLettersLow && numLettersUp && numSpecialChar);
-}
-
-async function perfectQuizez(req, res) {
-    let body = ""
-
-    req.on("data", chunk => {
-        body += chunk
-    })
-
-    req.in("end", async () => {
-        const {user, password} = JSON.parse(body);
-
-        const hash = crypto.createHash('sha256').update(password).digest('hex');
-
-        
-    })
-}
-
-async function accountDelete(req, res) {
-    let body = "";
-
-    req.on("data", chunk => {
-        body += chunk;
-    });
-
-    req.on("end", async () => {
-        try {
-            const { user, password } = JSON.parse(body);
-
-            const hash = crypto.createHash('sha256').update(password).digest('hex');
-
-            const searchQuery = `
-                SELECT * FROM users WHERE user = ? AND hash = ?
-            `;
-
-            db.query(searchQuery, [user, hash], (err, result) => {
-                if (err) {
-                    res.writeHead(500, jsonContentType);
-                    res.end(JSON.stringify({error: "Database error"}));
-                    return;
-                }
-
-                const deleteQuery = `
-                    DELETE FROM users WHERE id = ?
-                `;
-
-                db.query(deleteQuery, [result[0].id], error => {
-                    if (error) {
-                        res.writeHead(500, jsonContentType);
-                        res.end(JSON.stringify({error: "Database error"}));
-                        return;
-                    }
-                });
-            });
-
-            res.writeHead(200, jsonContentType);
-            res.end(JSON.stringify({message: "Account deleted!"}));
-        }
-        catch(err) {
-            console.log("Error parsing JSON: ", err);
-            res.writeHead(400, jsonContentType);
-            res.end(JSON.stringify({error: "Invalid JSON!"}));
-        }
-    });
-}
+const router = Router();
 
 async function profile(req, res) {
     let body = "";
@@ -388,7 +206,7 @@ async function login(req, res) {
     });
 }
 
-function evalReq(req, res) {
+function evalReq(req : Request, res : Response) {
     const route = req.url.split('/')[2];
     for (let i = 0; i < api.length; i++) {
         if (api[i].url === route) {
@@ -401,4 +219,4 @@ function evalReq(req, res) {
     res.end("API route not found");
 }
 
-export { evalReq }
+export default router;

@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1764922950553,
+      "tag": "0000_nifty_nehzno",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1764923515341,
+      "tag": "0001_amazing_wild_pack",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1764924891829,
+      "tag": "0002_complete_morlocks",
+      "breakpoints": true
+    }
+  ]
+}
