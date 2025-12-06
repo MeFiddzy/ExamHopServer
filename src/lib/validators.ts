@@ -51,5 +51,5 @@ function isValidPassword(pass : string) : boolean {
         }
     }
 
-    return (numNum && numLettersLow && numLettersUp && numSpecialChar) ? true : false;
+    return !!(numNum && numLettersLow && numLettersUp && numSpecialChar);
 }
