@@ -1,10 +1,10 @@
 import { Request, Router, Response } from "express";
-import * as zodSchemas from "../config/zod-schemas.ts";
-import { db } from '../config/db.ts'
+import * as zodSchemas from "../../zod-schemas.ts";
+import { db } from '../../db.ts'
 import jwt from "jsonwebtoken";
 import * as bcrypt from "bcrypt";
-import envData from "../config/env.config.ts";
-import * as tables from '../config/schema.ts'
+import envData from "../../env.config.ts";
+import * as tables from '../../schema.ts'
 import * as zod from 'zod';
 import * as drizzle from 'drizzle-orm';
 
@@ -91,7 +91,8 @@ authRouter.post('/register', async (req: Request, res: Response) => {
     }
     catch (err)  {
         if (err instanceof zod.ZodError) {
-            return res.status(400).json({ error: err.issues });
+            // @ts-ignore
+            return res.status(400).json({ error: err.issues[0].message });
         }
         res.status(400).json({ error: "Unknown validation error" });
 
@@ -111,7 +112,7 @@ authRouter.post('/register', async (req: Request, res: Response) => {
         });
     }
     catch (err) {
-        res.status(400).json({error: "Username already exists!"});
+        res.status(400).json({error: "Username or email already exists!"});
         return;
     }
 

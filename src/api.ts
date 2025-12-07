@@ -1,4 +1,4 @@
-import { db } from "./config/db.ts";
+import { db } from "../db.ts";
 import { Router } from "express";
 
 const router = Router();
