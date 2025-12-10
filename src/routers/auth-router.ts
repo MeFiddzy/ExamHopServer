@@ -11,69 +11,30 @@ import * as drizzle from 'drizzle-orm';
 const authRouter = Router();
 
 authRouter.post('/login', async (req: Request, res: Response) => {
-    const { identification, password } = req.body;
+    const { email, password } = req.body;
 
-    let isUsername: boolean = false;
+    const [user] = await db
+        .select({
+            passwordHash: tables.users.passwordHash,
+            userId: tables.users.id
+        })
+        .from(tables.users)
+        .where(drizzle.eq(tables.users.email, email));
 
-    try {
-        zod.email().parse(identification)
-    }
-    catch (error) {
-        isUsername = true;
-    }
+    console.log(user);
 
-    const hash: string = await bcrypt.hash(password, 10);
-
-    let username, userId, passwordHashInDb;
-
-    if (isUsername) {
-        // @ts-ignore
-        [userId, username, passwordHashInDb] = await loginViaUsernameData(req, res, hash);
-    }
-    else {
-        // @ts-ignore
-        [userId, username, passwordHashInDb] = await loginViaEmailData(req, res, hash);
-    }
-
-    // @ts-ignore
-    if (passwordHashInDb != passwordHash) {
-        res.status(400).json({ error: "Incorrect password" });
+    if (!user || !await bcrypt.compare(password, user!.passwordHash)) {
+        res.status(404).json({ error: "Incorrect email or password" });
         return;
     }
 
     const token = jwt.sign(
-        {user_id: userId, username: username, password: req.body.password},
+        {user_id: user!.userId},
         envData.TOKEN_SECRET
     )
 
     res.status(200).json({ message: "Login successfully", token: token });
 });
-
-async function loginViaEmailData(req: Request, res: Response, passwordHash: string) {
-    const [passwordHashInDb, userId, username] = await db
-        .select({
-            passwordHash: tables.users.passwordHash,
-            userId: tables.users.id,
-            username: tables.users.username
-        })
-        .from(tables.users)
-        .where(drizzle.eq(tables.users.username, req.body.username));
-
-    return { userId: userId, username: username, passwordHashInDb: passwordHashInDb};
-}
-
-async function loginViaUsernameData(req: Request, res: Response, passwordHash: string) {
-    const [passwordHashInDb, userId, username] = await db
-        .select({
-            passwordHash: tables.users.passwordHash,
-            userId: tables.users.id,
-            username: tables.users.username
-        })
-        .from(tables.users)
-        .where(drizzle.eq(tables.users.email, req.body.email));
-
-    return { userId: userId, username: username, passwordHashInDb: passwordHashInDb};
-}
 
 authRouter.post('/register', async (req: Request, res: Response) => {
     let { username, email, birthday, firstName, lastName, password } = req.body;
@@ -81,7 +42,7 @@ authRouter.post('/register', async (req: Request, res: Response) => {
     console.log(req.body);
 
     try {
-        zodSchemas.userSchema.parse({
+        zodSchemas.registerSchema.parse({
             username: username,
             email: email,
             birthday: birthday,
@@ -102,7 +63,7 @@ authRouter.post('/register', async (req: Request, res: Response) => {
     const hash = await bcrypt.hash(req.body.password, 10);
 
     try {
-        db.insert(tables.users).values({
+        await db.insert(tables.users).values({
             username: username,
             firstName: firstName,
             lastName: lastName,
@@ -112,7 +73,14 @@ authRouter.post('/register', async (req: Request, res: Response) => {
         });
     }
     catch (err) {
-        res.status(400).json({error: "Username or email already exists!"});
+        console.log(err);
+
+        // @ts-ignore
+        if (err.cause.code == 23505)
+            res.status(400).json({error: "Username or email already exists!"});
+        else {
+            res.status(500).json({ error: "Database error" });
+        }
         return;
     }
 
