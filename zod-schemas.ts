@@ -18,6 +18,12 @@ const passwordSchema = zod
     .regex(/^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[!@#$%^&*()_\-=/\\,.<>])[A-Za-z0-9!@#$%^&*()_\-=/\\,.<>]{8,}$/,
         "Password contain one lowercase letter, one uppercase letter, one number and one of the special characters '_', '-', '=', '\\'. '/', ',', '.', '<', '>'.")
 
+export const resetPasswordSchema = zod.object({
+    email: zod.email(),
+    oldPassword: passwordSchema,
+    newPassword: passwordSchema
+})
+
 export const loginSchema = zod.object({
     email: zod.email(),
     password: passwordSchema,
