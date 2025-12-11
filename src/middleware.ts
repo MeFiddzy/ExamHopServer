@@ -1,15 +1,29 @@
-import {NextFunction, Request} from 'express';
-import {JwtPayload} from "jsonwebtoken";
+import { NextFunction, Response, Request } from 'express';
+import jwt, { JwtPayload } from 'jsonwebtoken';
+import envConfig from '../env.config.ts';
 
-export interface AuthRequest extends Request {
-    user?: string | JwtPayload;
-}
-
-export function authenticateJWT(req: Request, res: Response, next: NextFunction) {
+export function authenticateJWT(
+    req: Request,
+    res: Response,
+    next: NextFunction
+) {
     const header = req.headers.authorization;
 
     if (!header || !header.startsWith('Bearer ')) {
-        //res.status(401).json({ error: "Missing or invalid authorization header"});
+        res.status(401).json({
+            error: 'Missing or invalid authorization header'
+        });
         return;
+    }
+
+    const token = header.split(' ')[1];
+
+    try {
+        req.userID = +(jwt.verify(token!, envConfig.TOKEN_SECRET) as JwtPayload)
+            .userId;
+        console.log(req.userID);
+        next();
+    } catch (err) {
+        res.status(401).json({ error: 'Unauthorized' });
     }
 }
