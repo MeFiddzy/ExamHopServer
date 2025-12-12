@@ -43,7 +43,7 @@ export const quizzes = pgTable('quizzes', {
         .notNull()
         .references(() => users.id),
     subject: text('subject').notNull(),
-    createdAt: timestamp('createdAt').notNull(),
+    createdAt: timestamp('created_at').notNull(),
     viewType: viewTypeEnum('view_type').notNull()
 });
 

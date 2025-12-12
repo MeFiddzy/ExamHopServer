@@ -1,8 +1,8 @@
 import * as zod from 'zod';
 
-const difficultyEnum = zod.enum(["easy", "medium", "hard"]);
-const viewTypeEnum = zod.enum(["public", "private", "unlisted"]);
-const questionTypeEnum = zod.enum(["multiChoice", "oneChoice"]);
+const difficultyEnum = zod.enum(['easy', 'medium', 'hard']);
+const viewTypeEnum = zod.enum(['public', 'private', 'unlisted']);
+const questionTypeEnum = zod.enum(['multiChoice', 'oneChoice']);
 
 const legalNameSchema = zod
     .string('Legal Name must be a string.')
@@ -52,7 +52,7 @@ export const registerSchema = zod.object({
 });
 
 const multiChoiceData = zod.object({
-    type: zod.literal("multiChoice"),
+    type: zod.literal('multiChoice'),
     maxSelected: zod.number(),
     answers: zod.array(
         zod.object({
@@ -63,19 +63,14 @@ const multiChoiceData = zod.object({
 });
 
 const oneChoiceData = zod.object({
-    type: zod.literal("oneChoice"),
+    type: zod.literal('oneChoice'),
     answers: zod.array(zod.string()),
     correctAns: zod.number()
 });
 
-const questionData = zod.discriminatedUnion("type", [
-    multiChoiceData,
-    oneChoiceData
-]);
-
 const questionSchema = zod.object({
     title: zod.string(),
-    data: questionData
+    data: zod.discriminatedUnion('type', [multiChoiceData, oneChoiceData])
 });
 
 export const quizCreateSchema = zod.object({
@@ -86,3 +81,15 @@ export const quizCreateSchema = zod.object({
     viewType: viewTypeEnum,
     questions: zod.array(questionSchema)
 });
+
+export const quizEditSchema = zod
+    .object({
+        title: zod.string().min(1).max(255).optional(),
+        description: zod.string().min(1).max(2000).optional(),
+        subject: zod.string().min(1).max(100).optional(),
+        difficulty: zod.enum(['easy', 'medium', 'hard']).optional(),
+        viewType: zod.enum(['public', 'private', 'unlisted']).optional()
+    })
+    .refine((obj) => Object.keys(obj).length > 0, {
+        message: 'At least one field is required.'
+    });

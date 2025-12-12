@@ -1,0 +1,1 @@
+ALTER TABLE "quizzes" RENAME COLUMN "createdAt" TO "created_at";
