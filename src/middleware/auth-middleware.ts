@@ -1,8 +1,8 @@
 import { NextFunction, Response, Request } from 'express';
 import jwt, { JwtPayload } from 'jsonwebtoken';
-import envConfig from '../env.config.ts';
+import envConfig from '../../env.config.ts';
 
-export function authenticateJWT(
+export function authMiddleware(
     req: Request,
     res: Response,
     next: NextFunction
