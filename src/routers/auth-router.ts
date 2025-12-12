@@ -47,24 +47,24 @@ authRouter.post(
         console.log(req.body);
 
         /**
-        try {
-            zodSchemas.registerSchema.parse({
-                username: username,
-                email: email,
-                birthday: birthday,
-                password: password,
-                legalName: { firstName, lastName }
-            });
-        } catch (err) {
-            if (err instanceof zod.ZodError) {
-                // @ts-ignore
-                return res.status(400).json({ error: err.issues[0].message });
-            }
-            res.status(400).json({ error: 'Unknown validation error' });
+         try {
+         zodSchemas.registerSchema.parse({
+         username: username,
+         email: email,
+         birthday: birthday,
+         password: password,
+         legalName: { firstName, lastName }
+         });
+         } catch (err) {
+         if (err instanceof zod.ZodError) {
+         // @ts-ignore
+         return res.status(400).json({ error: err.issues[0].message });
+         }
+         res.status(400).json({ error: 'Unknown validation error' });
 
-            return;
-        }
-        **/
+         return;
+         }
+         **/
 
         const hash = await bcrypt.hash(password, 10);
 

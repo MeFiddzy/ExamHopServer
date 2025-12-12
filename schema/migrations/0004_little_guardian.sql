@@ -1,1 +1,0 @@
-ALTER TABLE "users" DROP CONSTRAINT "users_last_name_unique";

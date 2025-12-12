@@ -1,1 +1,0 @@
-ALTER TABLE "users" ADD CONSTRAINT "users_last_name_unique" UNIQUE("last_name");

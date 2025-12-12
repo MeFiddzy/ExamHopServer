@@ -21,7 +21,6 @@ export function authMiddleware(
     try {
         req.userID = +(jwt.verify(token!, envConfig.TOKEN_SECRET) as JwtPayload)
             .userId;
-        console.log(req.userID);
         next();
     } catch (err) {
         res.status(401).json({ error: 'Unauthorized' });
