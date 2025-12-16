@@ -42,7 +42,7 @@ quizRouter.post(
     }
 );
 
-quizRouter.post(
+quizRouter.patch(
     '/edit/:id',
     zodMiddleware(zodSchemas.quizEditSchema),
     async (req: Request, res: Response) => {
@@ -74,7 +74,8 @@ quizRouter.post(
             return;
         }
 
-        await db.update(tables.quizzes)
+        await db
+            .update(tables.quizzes)
             .set(edits)
             .where(eq(tables.quizzes.id, quizId));
 

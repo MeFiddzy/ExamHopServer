@@ -1,4 +1,5 @@
 import * as zod from 'zod';
+import { ZodObject } from 'zod';
 
 const difficultyEnum = zod.enum(['easy', 'medium', 'hard']);
 const viewTypeEnum = zod.enum(['public', 'private', 'unlisted']);
@@ -70,7 +71,7 @@ const oneChoiceData = zod.object({
 
 const questionSchema = zod.object({
     title: zod.string(),
-    data: zod.discriminatedUnion('type', [multiChoiceData, oneChoiceData])
+    data: zod.discriminatedUnion('type', [multiChoiceData, oneChoiceData]),
 });
 
 export const quizCreateSchema = zod.object({
@@ -89,6 +90,29 @@ export const quizEditSchema = zod
         subject: zod.string().min(1).max(100).optional(),
         difficulty: zod.enum(['easy', 'medium', 'hard']).optional(),
         viewType: zod.enum(['public', 'private', 'unlisted']).optional()
+    })
+    .refine((obj) => Object.keys(obj).length > 0, {
+        message: 'At least one field is required.'
+    });
+
+function makeEditVariant<
+    T extends zod.ZodObject<{ type: zod.ZodLiteral<string> }>
+>(schema: T) {
+    return schema
+        .omit({ type: true })
+        .partial()
+        .extend({ type: schema.shape.type });
+}
+
+export const questionEditSchema = zod
+    .object({
+        title: zod.string().optional(),
+        data: zod
+            .discriminatedUnion('type', [
+                makeEditVariant(multiChoiceData),
+                makeEditVariant(oneChoiceData)
+            ])
+            .optional()
     })
     .refine((obj) => Object.keys(obj).length > 0, {
         message: 'At least one field is required.'
