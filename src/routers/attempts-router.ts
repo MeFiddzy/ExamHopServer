@@ -16,7 +16,7 @@ const attemptsRouter = Router();
 attemptsRouter.get('/attempts', async (req: Request, res: Response) => {
     const parsed = attemptQuerySchema.safeParse(req.query);
     if (!parsed.success)
-        return res.status(400).json({ error: parsed.error.issues[0].message });
+        return res.status(400).json({ error: parsed.error.issues[0]!.message });
     const { page, pageSize, quizId } = parsed.data;
     const offset = (page - 1) * pageSize;
 
@@ -94,7 +94,7 @@ attemptsRouter.post(
             })
             .returning({ id: tables.quizAttempts.id });
 
-        res.status(201).json({ id: attempt.id });
+        res.status(201).json({ id: attempt!.id });
     }
 );
 
