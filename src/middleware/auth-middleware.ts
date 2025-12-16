@@ -19,8 +19,11 @@ export function authMiddleware(
     const token = header.split(' ')[1];
 
     try {
-        req.userID = +(jwt.verify(token!, envConfig.TOKEN_SECRET) as JwtPayload)
-            .userId;
+        const payload = jwt.verify(token!, envConfig.TOKEN_SECRET) as JwtPayload;
+        req.userID = +payload.userId;
+        if (payload.role) {
+            req.role = payload.role as 'user' | 'admin';
+        }
         next();
     } catch (err) {
         res.status(401).json({ error: 'Unauthorized' });

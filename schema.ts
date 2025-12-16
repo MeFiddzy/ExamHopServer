@@ -22,6 +22,8 @@ export const viewTypeEnum = pgEnum('view_type', [
     'unlisted'
 ]);
 
+export const roleEnum = pgEnum('role_enum', ['user', 'admin']);
+
 export const users = pgTable('users', {
     id: serial('id').primaryKey(),
     username: text('username').notNull().unique(),
@@ -31,7 +33,8 @@ export const users = pgTable('users', {
     birthday: date('birthday', {
         mode: 'string'
     }).notNull(),
-    passwordHash: text('password_hash').notNull()
+    passwordHash: text('password_hash').notNull(),
+    role: roleEnum('role').default('user').notNull()
 });
 
 export const quizzes = pgTable('quizzes', {
@@ -53,38 +56,6 @@ export const questions = pgTable('questions', {
     title: text('title').notNull(),
     data: jsonb('data').notNull()
 });
-
-export const quizAttempts = pgTable('quiz_attempts', {
-    id: serial('id').primaryKey(),
-    userId: integer('user_id')
-        .notNull()
-        .references(() => users.id),
-    quizId: integer('quiz_id')
-        .notNull()
-        .references(() => quizzes.id),
-    startedAt: timestamp('started_at').notNull(),
-    finishedAt: timestamp('finished_at').notNull(),
-    score: integer('score').notNull(),
-    assignmentId: integer('assignment_id').references(() => assignments.id)
-});
-
-export const attemptAnswers = pgTable(
-    'attempt_answers',
-    {
-        attemptId: integer('attempt_id')
-            .notNull()
-            .references(() => quizAttempts.id),
-        questionId: integer('question_id')
-            .notNull()
-            .references(() => questions.id),
-        answer: jsonb('answer').notNull()
-    },
-    (table) => [
-        primaryKey({
-            columns: [table.attemptId, table.questionId]
-        })
-    ]
-);
 
 export const comments = pgTable('comments', {
     id: serial('id').primaryKey().notNull(),
@@ -140,7 +111,7 @@ export const teachersToClasses = pgTable(
     ]
 );
 
-export const assignments = pgTable('assignment', {
+export const assignments = pgTable('assignments', {
     id: serial('id').notNull().primaryKey(),
     classId: integer('class_id')
         .notNull()
@@ -155,7 +126,7 @@ export const assignments = pgTable('assignment', {
 });
 
 export const assignmentsToQuizzes = pgTable(
-    'assignment_to_quiz',
+    'assignments_to_quizzes',
     {
         assignmentId: integer('assignment_id')
             .notNull()
@@ -167,6 +138,38 @@ export const assignmentsToQuizzes = pgTable(
     (table) => [
         primaryKey({
             columns: [table.quizId, table.assignmentId]
+        })
+    ]
+);
+
+export const quizAttempts = pgTable('quiz_attempts', {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+        .notNull()
+        .references(() => users.id),
+    quizId: integer('quiz_id')
+        .notNull()
+        .references(() => quizzes.id),
+    startedAt: timestamp('started_at').notNull(),
+    finishedAt: timestamp('finished_at').notNull(),
+    score: integer('score').notNull(),
+    assignmentId: integer('assignment_id').references(() => assignments.id)
+});
+
+export const attemptAnswers = pgTable(
+    'attempt_answers',
+    {
+        attemptId: integer('attempt_id')
+            .notNull()
+            .references(() => quizAttempts.id),
+        questionId: integer('question_id')
+            .notNull()
+            .references(() => questions.id),
+        answer: jsonb('answer').notNull()
+    },
+    (table) => [
+        primaryKey({
+            columns: [table.attemptId, table.questionId]
         })
     ]
 );

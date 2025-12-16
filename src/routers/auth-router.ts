@@ -19,19 +19,21 @@ authRouter.post(
         const [user] = await db
             .select({
                 passwordHash: tables.users.passwordHash,
-                userId: tables.users.id
+                userId: tables.users.id,
+                role: tables.users.role
             })
             .from(tables.users)
             .where(drizzle.eq(tables.users.email, email));
 
-        console.log(user);
-
-        if (!user || !(await bcrypt.compare(password, user!.passwordHash))) {
+        if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
             res.status(404).json({ error: 'Incorrect email or password' });
             return;
         }
 
-        const token = jwt.sign({ userId: user!.userId }, envData.TOKEN_SECRET);
+        const token = jwt.sign(
+            { userId: user.userId, role: user.role },
+            envData.TOKEN_SECRET
+        );
 
         res.status(200).json({ message: 'Login successfully', token: token });
     }
