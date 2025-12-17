@@ -1,3 +1,5 @@
+# ExamHopBAckedn
+release in frontend
 frontend: https://github.com/MeFiddzy/examhopfrontend
 
 1. clone the git repo with `git clone https://github.com/MeFiddzy/ExamHopServer.git`
