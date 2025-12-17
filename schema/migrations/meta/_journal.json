@@ -15,6 +15,13 @@
       "when": 1765566989325,
       "tag": "0001_cold_amphibian",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1765887151760,
+      "tag": "0002_fuzzy_lockjaw",
+      "breakpoints": true
     }
   ]
 }

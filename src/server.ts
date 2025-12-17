@@ -14,10 +14,34 @@ import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './docs/openapi.ts';
 
 export const app = express();
-const hostname = 'localhost';
+const hostname = '0.0.0.0';
 const port = 8000;
 
 app.use(express.json());
+
+import { Request, Response, NextFunction } from 'express';
+
+export function loggerMiddleware(
+    req: Request,
+    res: Response,
+    next: NextFunction
+) {
+    const start = Date.now();
+
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+
+        console.log(
+            `${req.method} ${req.originalUrl} ` +
+            `${res.statusCode} ${duration}ms`
+        );
+    });
+
+    next();
+}
+
+
+app.use(loggerMiddleware);
 
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.get('/api/docs.json', (_req, res) => res.json(swaggerSpec));

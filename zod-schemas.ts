@@ -190,8 +190,7 @@ export const adminSetRoleSchema = zod.object({
     role: roleEnum
 });
 
-export const userListQuerySchema = paginationSchema.extend({
-});
+export const userListQuerySchema = paginationSchema.extend({});
 
 // Comments
 export const commentCreateSchema = zod.object({

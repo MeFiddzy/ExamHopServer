@@ -42,6 +42,8 @@ usersRouter.delete('/me', async (req: Request, res: Response) => {
     res.status(200).json({ message: 'Account deleted (hard)' });
 });
 
+usersRouter.
+
 usersRouter.get('/', async (req: Request, res: Response) => {
     const parsed = zodSchemas.userListQuerySchema.safeParse(req.query);
     if (!parsed.success) {
